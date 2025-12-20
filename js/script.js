@@ -1,6 +1,6 @@
 // --- [新增] 簡易驗證邏輯 ---
-const correctUser = "abcde";  // ⚠️ 請修改您的帳號
-const correctPass = "12345";   // ⚠️ 請修改您的密碼
+const correctUser = "admin";  // ⚠️ 請修改您的帳號
+const correctPass = "1234";   // ⚠️ 請修改您的密碼
 
 function checkLogin() {
   const u = document.getElementById("loginUser").value;
