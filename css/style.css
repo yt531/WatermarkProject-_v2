@@ -1,0 +1,548 @@
+:root {
+  --primary: #2b579a;
+  --bg: #f3f2f1;
+  --panel-bg: #ffffff;
+  --border: #e1dfdd;
+}
+body {
+  font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+  background-color: var(--bg);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+header {
+  background-color: var(--primary);
+  color: white;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: normal;
+}
+
+.main-workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.preview-pane {
+  flex: 1;
+  background-color: #e3e5e8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: auto;
+  position: relative;
+  touch-action: none;
+}
+.canvas-container {
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  background: white;
+  max-width: 100%;
+  max-height: 100%;
+  border: 1px solid #ccc;
+  pointer-events: none; /* 讓事件穿透到遮罩 */
+}
+.control-pane {
+  width: 380px;
+  background-color: var(--panel-bg);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- 安全遮罩框 (8點控制版) --- */
+.mask-box {
+  position: absolute;
+  top: 20%;
+  left: 20%;
+  width: 150px;
+  height: 150px;
+  background-color: rgba(255, 0, 0, 0.15);
+  border: 1px dashed red;
+  cursor: move;
+  box-sizing: border-box;
+  z-index: 10;
+  min-width: 20px;
+  min-height: 20px;
+}
+.mask-label {
+  background: red;
+  color: white;
+  font-size: 10px;
+  padding: 2px 4px;
+  position: absolute;
+  top: -20px;
+  left: 0;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* 調整手柄 */
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border: 1px solid red;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+  z-index: 11;
+}
+.n {
+  top: -5px;
+  left: 50%;
+  margin-left: -5px;
+  cursor: n-resize;
+}
+.s {
+  bottom: -5px;
+  left: 50%;
+  margin-left: -5px;
+  cursor: s-resize;
+}
+.w {
+  left: -5px;
+  top: 50%;
+  margin-top: -5px;
+  cursor: w-resize;
+}
+.e {
+  right: -5px;
+  top: 50%;
+  margin-top: -5px;
+  cursor: e-resize;
+}
+.nw {
+  top: -5px;
+  left: -5px;
+  cursor: nw-resize;
+}
+.ne {
+  top: -5px;
+  right: -5px;
+  cursor: ne-resize;
+}
+.sw {
+  bottom: -5px;
+  left: -5px;
+  cursor: sw-resize;
+}
+.se {
+  bottom: -5px;
+  right: -5px;
+  cursor: se-resize;
+}
+
+/* Controls */
+.panel-section {
+  padding: 15px;
+  border-bottom: 1px solid var(--border);
+}
+fieldset {
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  margin: 0 0 15px 0;
+  padding: 10px;
+}
+legend {
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: bold;
+  padding: 0 5px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+label {
+  font-size: 13px;
+  min-width: 60px;
+  color: #444;
+}
+input[type="text"],
+input[type="number"],
+select {
+  padding: 4px 8px;
+  border: 1px solid #888;
+  border-radius: 3px;
+  font-size: 13px;
+}
+input[type="text"]:focus,
+input[type="number"]:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+.slider-group {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 5px;
+}
+input[type="range"] {
+  flex: 1;
+  cursor: pointer;
+}
+input.num-input {
+  width: 50px;
+  text-align: right;
+}
+
+/* Color Picker */
+.color-control-wrapper {
+  position: relative;
+}
+.color-dropdown-btn {
+  width: 100%;
+  padding: 8px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.2s;
+}
+.color-dropdown-btn:hover {
+  background-color: #f0f0f0;
+  border-color: var(--primary);
+}
+.color-preview-box {
+  width: 24px;
+  height: 24px;
+  background-color: #eee;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border-bottom: 4px solid #ff0000;
+  font-family: serif;
+}
+.btn-text {
+  font-size: 13px;
+  color: #444;
+}
+.color-popup {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #aaa;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  width: 230px;
+  border-radius: 4px;
+  margin-top: 5px;
+}
+.color-section-title {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 2px;
+  margin-bottom: 10px;
+}
+.standard-grid {
+  margin-bottom: 5px;
+}
+.swatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.swatch:hover {
+  transform: scale(1.2);
+  border: 1px solid #f29b38;
+  background-clip: padding-box;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+  z-index: 1;
+}
+.color-divider {
+  height: 1px;
+  background: #eee;
+  margin: 8px 0;
+}
+.custom-color-panel {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+.rgb-inputs {
+  display: flex;
+  gap: 5px;
+}
+.rgb-inputs input {
+  width: 100%;
+}
+
+/* Grid Selector */
+.grid-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  width: 100px;
+}
+.grid-btn {
+  height: 25px;
+  border: 1px solid #ccc;
+  background: #f0f0f0;
+  cursor: pointer;
+}
+.grid-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Buttons */
+.file-upload-btn {
+  background: var(--primary);
+  color: white;
+  text-align: center;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  display: block;
+}
+.file-upload-btn:hover {
+  background: #1e3f72;
+}
+input[type="file"] {
+  display: none;
+}
+.action-bar {
+  padding: 15px;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  background: #f9f9f9;
+}
+button.primary-btn {
+  width: 100%;
+  padding: 12px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+button.primary-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+.mode-switch {
+  display: flex;
+  background: #eee;
+  border-radius: 4px;
+  padding: 2px;
+  margin-bottom: 10px;
+}
+.mode-btn {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.mode-btn.active {
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+/* --- 簡易登入系統樣式 --- */
+#loginOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9); /* 深色背景擋住後面 */
+  z-index: 9999; /* 確保在最上層 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(5px); /* 背景模糊效果 */
+}
+
+.login-card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 80%;
+  max-width: 320px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.login-card input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.login-btn:active {
+  opacity: 0.9;
+}
+
+/* --- 手機版專用優化 (貼在 style.css 最下方) --- */
+@media (max-width: 768px) {
+  body {
+    height: auto;
+    overflow-x: hidden; /* 防止左右滑動 */
+  }
+
+  .main-workspace {
+    flex-direction: column;
+    overflow-y: visible; /* 讓手機版可以自然捲動 */
+  }
+
+  /* 1. 優化預覽區體驗 */
+  .preview-pane {
+    height: 50vh; /* 佔用螢幕一半高度，確保看得到預覽 */
+    flex: none;
+    border-bottom: 2px solid #ddd;
+    /* 關鍵：防止手指拖曳遮罩時，整個網頁跟著上下彈動 (iOS Safari 特別重要) */
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+
+  /* 2. 加大紅框的控制點 (Resize Handles) */
+  /* 手指比滑鼠粗，原本 10px 太難按，改為 24px */
+  .resize-handle {
+    width: 24px;
+    height: 24px;
+    border-width: 2px; /* 加粗邊框讓視覺更明顯 */
+    border-radius: 50%; /* 改成圓形比較好看且好按 */
+    background: white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  }
+
+  /* 因為控制點變大了，需要重新校正位置 (24px的一半是12px) */
+  .n {
+    top: -12px;
+    margin-left: -12px;
+  }
+  .s {
+    bottom: -12px;
+    margin-left: -12px;
+  }
+  .w {
+    left: -12px;
+    margin-top: -12px;
+  }
+  .e {
+    right: -12px;
+    margin-top: -12px;
+  }
+  .nw {
+    top: -12px;
+    left: -12px;
+  }
+  .ne {
+    top: -12px;
+    right: -12px;
+  }
+  .sw {
+    bottom: -12px;
+    left: -12px;
+  }
+  .se {
+    bottom: -12px;
+    right: -12px;
+  }
+
+  /* 3. 優化控制面板 */
+  .control-pane {
+    width: 100%;
+    border-left: none;
+    border-top: none;
+    height: auto;
+    overflow: visible;
+    padding-bottom: 80px; /* 預留底部空間給按鈕 */
+  }
+
+  /* 4. 加大按鈕觸控區域 (符合 Apple/Google 設計規範的最小 44px) */
+  .mode-btn,
+  .grid-btn,
+  .color-dropdown-btn,
+  .file-upload-btn,
+  input[type="range"],
+  select {
+    min-height: 44px;
+    font-size: 14px; /* 字體稍微加大 */
+  }
+
+  /* 九宮格按鈕加大 */
+  .grid-selector {
+    width: 100%; /* 讓九宮格寬一點 */
+    gap: 8px;
+  }
+  .grid-btn {
+    height: 40px;
+  }
+
+  /* 讓滑桿更好拉 */
+  input[type="range"] {
+    height: 30px; /* 增加滑桿感應區高度 */
+  }
+
+  /* 讓「另存新檔」按鈕固定在底部，方便操作 */
+  .action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    padding: 10px 15px;
+    background: #f9f9f9; /* 確保不透明 */
+  }
+
+  /* 修正彈出顏色選單的位置 */
+  .color-popup {
+    width: 90%; /* 手機上寬度設為 90% */
+    left: 5%;
+  }
+}

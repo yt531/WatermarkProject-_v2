@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>專業浮水印工作室</title>
+
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    </script>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Roboto+Mono&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div id="loginOverlay">
+      <div class="login-card">
+        <h2 style="margin-top: 0; color: #333">🔒 請先登入</h2>
+        <input type="text" id="loginUser" placeholder="請輸入帳號" />
+        <input type="password" id="loginPass" placeholder="請輸入密碼" />
+        <button onclick="checkLogin()" class="login-btn">登入系統</button>
+        <div
+          id="loginError"
+          style="color: red; font-size: 12px; margin-top: 10px; display: none"
+        >
+          帳號或密碼錯誤
+        </div>
+      </div>
+    </div>
+
+    <header>
+      <h1>💧 專業浮水印工作室</h1>
+      <div style="font-size: 12px; opacity: 0.8">全能旗艦版</div>
+    </header>
+
+    <div class="main-workspace">
+      <div class="preview-pane" id="previewPane">
+        <div id="welcomeMsg" style="color: #666">請從右側選單載入檔案</div>
+
+        <div style="position: relative; display: inline-block">
+          <canvas id="previewCanvas" class="canvas-container"></canvas>
+
+          <div id="safeZoneBox" class="mask-box" style="display: none">
+            <div class="mask-label">安全區 (不蓋印)</div>
+            <div class="resize-handle n" data-dir="n"></div>
+            <div class="resize-handle s" data-dir="s"></div>
+            <div class="resize-handle w" data-dir="w"></div>
+            <div class="resize-handle e" data-dir="e"></div>
+            <div class="resize-handle nw" data-dir="nw"></div>
+            <div class="resize-handle ne" data-dir="ne"></div>
+            <div class="resize-handle sw" data-dir="sw"></div>
+            <div class="resize-handle se" data-dir="se"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-pane">
+        <div
+          class="panel-section"
+          style="background: #eef3fb; border-bottom: 2px solid #ccdbe8"
+        >
+          <label
+            style="
+              font-weight: bold;
+              color: #2b579a;
+              display: block;
+              margin-bottom: 8px;
+            "
+            >🛡️ 浮水印用途：</label
+          >
+          <div class="mode-switch">
+            <button
+              class="mode-btn active"
+              onclick="setUsageMode('general')"
+              id="btnModeGeneral"
+            >
+              📄 一般文件
+            </button>
+            <button
+              class="mode-btn"
+              onclick="setUsageMode('idcard')"
+              id="btnModeID"
+            >
+              🪪 證件保護
+            </button>
+          </div>
+          <div
+            id="idModeHint"
+            style="
+              font-size: 12px;
+              color: #d9534f;
+              display: none;
+              margin-top: 5px;
+            "
+          >
+            💡
+            請在左側預覽圖上，調整紅色框框位置，框選處將<b>不會</b>加上浮水印。
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <label class="file-upload-btn">
+            📂 選擇檔案 (支援多選)
+            <input
+              type="file"
+              id="fileInput"
+              accept=".jpg,.png,.pdf"
+              multiple
+              onchange="handleFiles()"
+            />
+          </label>
+          <div
+            id="fileInfo"
+            style="
+              font-size: 12px;
+              margin-top: 5px;
+              color: #666;
+              text-align: center;
+            "
+          >
+            尚未選擇
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="mode-switch">
+            <button
+              class="mode-btn active"
+              onclick="setMode('single')"
+              id="btnSingle"
+            >
+              單一浮水印
+            </button>
+            <button class="mode-btn" onclick="setMode('tiled')" id="btnTiled">
+              鋪滿 (密集)
+            </button>
+          </div>
+
+          <fieldset>
+            <legend>內容與字型</legend>
+            <div class="row">
+              <input
+                type="text"
+                id="wmText"
+                value="機密 CONFIDENTIAL"
+                style="width: 100%"
+                oninput="update()"
+              />
+            </div>
+            <div class="row">
+              <select id="wmFont" style="width: 100%" onchange="update()">
+                <option value="Arial">Arial (無襯線)</option>
+                <option value="Times New Roman">Times (襯線)</option>
+                <option value="Courier New">Courier (等寬)</option>
+                <option value="Microsoft JhengHei">微軟正黑體</option>
+              </select>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="panel-section">
+          <fieldset>
+            <legend>文字外觀</legend>
+            <div class="row">
+              <label>大小</label>
+              <div class="slider-group">
+                <input
+                  type="range"
+                  id="sizeRange"
+                  min="10"
+                  max="200"
+                  value="50"
+                  oninput="syncNum('size', this.value)"
+                />
+                <input
+                  type="number"
+                  id="sizeNum"
+                  class="num-input"
+                  value="50"
+                  oninput="syncRange('size', this.value)"
+                />
+              </div>
+            </div>
+            <div class="row">
+              <label>角度</label>
+              <div class="slider-group">
+                <input
+                  type="range"
+                  id="rotRange"
+                  min="0"
+                  max="360"
+                  value="335"
+                  oninput="syncNum('rot', this.value)"
+                />
+                <input
+                  type="number"
+                  id="rotNum"
+                  class="num-input"
+                  value="335"
+                  oninput="syncRange('rot', this.value)"
+                />
+              </div>
+            </div>
+            <div class="row">
+              <label>透明</label>
+              <div class="slider-group">
+                <input
+                  type="range"
+                  id="opRange"
+                  min="0"
+                  max="100"
+                  value="40"
+                  oninput="syncNum('op', this.value)"
+                />
+                <input
+                  type="number"
+                  id="opNum"
+                  class="num-input"
+                  value="40"
+                  oninput="syncRange('op', this.value)"
+                />
+                <span style="font-size: 12px">%</span>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>文字顏色</legend>
+            <div class="color-control-wrapper">
+              <button
+                id="colorDropdownBtn"
+                class="color-dropdown-btn"
+                onclick="toggleColorMenu()"
+              >
+                <span class="color-preview-box" id="currentColorBox">A</span>
+                <span class="btn-text">選擇顏色 ▼</span>
+              </button>
+              <div id="colorPopup" class="color-popup" style="display: none">
+                <div class="color-section-title">主題色彩</div>
+                <div id="themeColorGrid" class="color-grid"></div>
+                <div class="color-section-title">標準色彩</div>
+                <div
+                  id="standardColorGrid"
+                  class="color-grid standard-grid"
+                ></div>
+                <div class="color-divider"></div>
+                <div
+                  class="color-section-title"
+                  style="cursor: pointer"
+                  onclick="toggleCustomColor()"
+                >
+                  更多顏色 ▶
+                </div>
+                <div
+                  id="customColorPanel"
+                  class="custom-color-panel"
+                  style="display: none"
+                >
+                  <div class="row">
+                    <label>HEX</label>
+                    <input
+                      type="text"
+                      id="colorHex"
+                      value="#ff0000"
+                      oninput="syncColor('hex')"
+                    />
+                    <input
+                      type="color"
+                      id="colorPicker"
+                      value="#ff0000"
+                      oninput="syncColor('picker')"
+                      style="visibility: hidden; width: 0"
+                    />
+                  </div>
+                  <div class="row rgb-inputs">
+                    <label>RGB</label>
+                    <input
+                      type="number"
+                      id="colorR"
+                      max="255"
+                      oninput="syncColor('rgb')"
+                    />
+                    <input
+                      type="number"
+                      id="colorG"
+                      max="255"
+                      oninput="syncColor('rgb')"
+                    />
+                    <input
+                      type="number"
+                      id="colorB"
+                      max="255"
+                      oninput="syncColor('rgb')"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="panel-section">
+          <fieldset id="singleControls">
+            <legend>位置設定</legend>
+            <div class="row">
+              <label>快速定位</label>
+              <div class="grid-selector">
+                <button
+                  id="btn-top-left"
+                  class="grid-btn"
+                  onclick="setPos('top-left')"
+                ></button>
+                <button
+                  id="btn-top-center"
+                  class="grid-btn"
+                  onclick="setPos('top-center')"
+                ></button>
+                <button
+                  id="btn-top-right"
+                  class="grid-btn"
+                  onclick="setPos('top-right')"
+                ></button>
+                <button
+                  id="btn-middle-left"
+                  class="grid-btn"
+                  onclick="setPos('middle-left')"
+                ></button>
+                <button
+                  id="btn-middle-center"
+                  class="grid-btn active"
+                  onclick="setPos('middle-center')"
+                ></button>
+                <button
+                  id="btn-middle-right"
+                  class="grid-btn"
+                  onclick="setPos('middle-right')"
+                ></button>
+                <button
+                  id="btn-bottom-left"
+                  class="grid-btn"
+                  onclick="setPos('bottom-left')"
+                ></button>
+                <button
+                  id="btn-bottom-center"
+                  class="grid-btn"
+                  onclick="setPos('bottom-center')"
+                ></button>
+                <button
+                  id="btn-bottom-right"
+                  class="grid-btn"
+                  onclick="setPos('bottom-right')"
+                ></button>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset id="tiledControls" style="display: none">
+            <legend>密度設定 (鋪滿)</legend>
+            <div class="row">
+              <label>間距</label>
+              <div class="slider-group">
+                <input
+                  type="range"
+                  id="gapRange"
+                  min="50"
+                  max="500"
+                  value="150"
+                  oninput="syncNum('gap', this.value)"
+                />
+                <input
+                  type="number"
+                  id="gapNum"
+                  class="num-input"
+                  value="150"
+                  oninput="syncRange('gap', this.value)"
+                />
+              </div>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="action-bar">
+          <div style="margin-bottom: 10px">
+            <label style="font-size: 13px; font-weight: bold; color: #555"
+              >輸出檔名設定：</label
+            >
+            <div style="display: flex; gap: 5px; margin-top: 5px">
+              <input
+                type="text"
+                id="outputFileName"
+                value="watermarked_output"
+                placeholder="輸入檔名"
+                style="flex: 2"
+              />
+              <select id="outputFormat" style="flex: 1">
+                <option value="auto">自動</option>
+                <option value="png">PNG</option>
+                <option value="jpg">JPG</option>
+                <option value="pdf">PDF</option>
+              </select>
+            </div>
+          </div>
+          <button
+            class="primary-btn"
+            id="dlBtn"
+            onclick="processAll()"
+            disabled
+          >
+            另存新檔
+          </button>
+          <div
+            id="statusMsg"
+            style="text-align: center; font-size: 12px; margin-top: 5px"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/script.js"></script>
+  </body>
+</html>
