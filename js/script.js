@@ -1,6 +1,6 @@
 // --- [新增] 簡易驗證邏輯 ---
-const correctUser = "12345"; //
-const correctPass = "abcde"; //
+const correctUser = "abcde";  // ⚠️ 請修改您的帳號
+const correctPass = "12345";   // ⚠️ 請修改您的密碼
 
 function checkLogin() {
   const u = document.getElementById("loginUser").value;
@@ -19,19 +19,14 @@ function checkLogin() {
   } else {
     // 密碼錯誤：顯示紅字
     errorMsg.style.display = "block";
-
+    
     // 加入錯誤震動效果
-    document
-      .querySelector(".login-card")
-      .animate(
-        [
-          { transform: "translateX(0)" },
-          { transform: "translateX(-10px)" },
-          { transform: "translateX(10px)" },
-          { transform: "translateX(0)" },
-        ],
-        { duration: 300 }
-      );
+    document.querySelector(".login-card").animate([
+      { transform: 'translateX(0)' },
+      { transform: 'translateX(-10px)' },
+      { transform: 'translateX(10px)' },
+      { transform: 'translateX(0)' }
+    ], { duration: 300 });
   }
 }
 
@@ -308,12 +303,12 @@ function handleFiles() {
     isLoaded = true;
     if (usageMode === "idcard") maskBox.style.display = "block";
     update();
-
+    
     // [手機版優化] 載入後自動捲回頂端預覽
     if (window.innerWidth <= 768) {
-      document.getElementById("previewPane").scrollIntoView({
-        behavior: "smooth",
-        block: "start",
+      document.getElementById("previewPane").scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
       });
     }
   };
