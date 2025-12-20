@@ -4,6 +4,23 @@
   --panel-bg: #ffffff;
   --border: #e1dfdd;
 }
+
+/* --- [新增] 響應式文字切換工具 --- */
+.mobile-text {
+  display: none; /* 電腦版預設隱藏手機文字 */
+}
+.desktop-text {
+  display: inline; /* 電腦版預設顯示電腦文字 */
+}
+@media (max-width: 768px) {
+  .mobile-text {
+    display: inline; /* 手機版顯示手機文字 */
+  }
+  .desktop-text {
+    display: none; /* 手機版隱藏電腦文字 */
+  }
+}
+
 body {
   font-family: "Segoe UI", "Noto Sans TC", sans-serif;
   background-color: var(--bg);
@@ -383,12 +400,12 @@ button.primary-btn:disabled {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.9); /* 深色背景擋住後面 */
-  z-index: 9999; /* 確保在最上層 */
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(5px); /* 背景模糊效果 */
+  backdrop-filter: blur(5px);
 }
 
 .login-card {
@@ -426,99 +443,101 @@ button.primary-btn:disabled {
   opacity: 0.9;
 }
 
-/* --- 手機版專用優化 (貼在 style.css 最下方) --- */
+/* --- 手機版專用優化 (最終完美版) --- */
 @media (max-width: 768px) {
+  
+  /* 1. 強制垂直排列 */
+  .main-workspace {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: visible;
+    height: auto;
+  }
+
   body {
     height: auto;
-    overflow-x: hidden; /* 防止左右滑動 */
+    overflow-x: hidden;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .main-workspace {
-    flex-direction: column;
-    overflow-y: visible; /* 讓手機版可以自然捲動 */
-  }
-
-  /* 1. 優化預覽區體驗 */
+  /* 2. 預覽區設定 */
   .preview-pane {
-    height: 50vh; /* 佔用螢幕一半高度，確保看得到預覽 */
+    height: 40vh; /* 高度佔螢幕 40% */
+    width: 100%;
     flex: none;
     border-bottom: 2px solid #ddd;
-    /* 關鍵：防止手指拖曳遮罩時，整個網頁跟著上下彈動 (iOS Safari 特別重要) */
-    overscroll-behavior: none; 
-    touch-action: none; 
+    touch-action: pan-y; 
+    overscroll-behavior: contain;
+    position: relative; 
   }
 
-  /* 2. 加大紅框的控制點 (Resize Handles) */
-  /* 手指比滑鼠粗，原本 10px 太難按，改為 24px */
-  .resize-handle {
-    width: 24px;
-    height: 24px;
-    border-width: 2px; /* 加粗邊框讓視覺更明顯 */
-    border-radius: 50%; /* 改成圓形比較好看且好按 */
-    background: white;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  /* 讓歡迎文字強制置中 */
+  #welcomeMsg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    text-align: center;
+    z-index: 10;
+    pointer-events: none;
   }
 
-  /* 因為控制點變大了，需要重新校正位置 (24px的一半是12px) */
-  .n { top: -12px; margin-left: -12px; }
-  .s { bottom: -12px; margin-left: -12px; }
-  .w { left: -12px; margin-top: -12px; }
-  .e { right: -12px; margin-top: -12px; }
-  .nw { top: -12px; left: -12px; }
-  .ne { top: -12px; right: -12px; }
-  .sw { bottom: -12px; left: -12px; }
-  .se { bottom: -12px; right: -12px; }
-
-  /* 3. 優化控制面板 */
+  /* 3. 控制面板設定 */
   .control-pane {
     width: 100%;
-    border-left: none;
-    border-top: none;
+    border: none;
     height: auto;
     overflow: visible;
-    padding-bottom: 80px; /* 預留底部空間給按鈕 */
+    padding-bottom: 120px !important; 
   }
 
-  /* 4. 加大按鈕觸控區域 (符合 Apple/Google 設計規範的最小 44px) */
-  .mode-btn, 
-  .grid-btn, 
-  .color-dropdown-btn,
-  .file-upload-btn,
-  input[type="range"],
-  select {
-    min-height: 44px; 
-    font-size: 14px; /* 字體稍微加大 */
-  }
-
-  /* 九宮格按鈕加大 */
-  .grid-selector {
-    width: 100%; /* 讓九宮格寬一點 */
-    gap: 8px;
-  }
-  .grid-btn {
-    height: 40px;
-  }
-  
-  /* 讓滑桿更好拉 */
-  input[type="range"] {
-    height: 30px; /* 增加滑桿感應區高度 */
-  }
-
-  /* 讓「另存新檔」按鈕固定在底部，方便操作 */
+  /* 4. 底部操作區對齊 */
   .action-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    z-index: 100;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-    padding: 10px 15px;
-    background: #f9f9f9; /* 確保不透明 */
+    position: static;
+    margin: 15px; /* 左右留邊距對齊黃框 */
+    width: auto;
+    padding: 15px;
+    background: #f9f9f9;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    box-shadow: none;
   }
+
+  /* --- 其他既有設定 --- */
+  .mask-box { touch-action: none; }
   
-  /* 修正彈出顏色選單的位置 */
+  .resize-handle {
+    width: 24px; height: 24px;
+    border-width: 2px; border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    margin-left: -12px; margin-top: -12px; 
+  }
+  .n { top: 0; left: 50%; }
+  .s { bottom: 0; left: 50%; }
+  .w { top: 50%; left: 0; }
+  .e { top: 50%; right: 0; }
+  .nw { top: 0; left: 0; }
+  .ne { top: 0; right: 0; }
+  .sw { bottom: 0; left: 0; }
+  .se { bottom: 0; right: 0; }
+
+  .mode-btn, .grid-btn, .color-dropdown-btn, 
+  .file-upload-btn, input[type="range"], select, input[type="text"] {
+    min-height: 44px;
+    font-size: 15px;
+  }
+
+  .grid-selector { width: 100%; gap: 8px; }
+  .grid-btn { height: 45px; }
+  
+  #dlBtn { margin-top: 15px; height: 50px; font-size: 18px; }
+
   .color-popup {
-    width: 90%; /* 手機上寬度設為 90% */
-    left: 5%;
+    width: 90%; left: 5%;
+    position: fixed; top: 50%; transform: translateY(-50%);
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
   }
 }
