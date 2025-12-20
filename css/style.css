@@ -426,95 +426,109 @@ button.primary-btn:disabled {
   opacity: 0.9;
 }
 
-/* --- 手機版專用優化 --- */
+/* --- 手機版專用優化 (請覆蓋 style.css 最下方的同名區塊) --- */
 @media (max-width: 768px) {
+  /* 1. 讓網頁可以正常捲動 */
   body {
     height: auto;
-    overflow-x: hidden;       /* 保持水平不滑動 */
-    overflow-y: auto !important; /* ⚠️ [新增這行] 強制允許垂直捲動 */
-    -webkit-overflow-scrolling: touch; /* 讓 iOS 捲動更滑順 */
+    overflow-x: hidden;
+    overflow-y: auto !important; /* 強制允許垂直捲動 */
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* 確保主工作區也能正確延伸 */
   .main-workspace {
     flex-direction: column;
-    overflow: visible; 
-    height: auto;      
+    overflow: visible;
+    height: auto;
+    display: block; /* 確保區塊自然堆疊 */
   }
 
-  /* (原本的其他設定保持不變...) */
-  /* 以下為完整的手機版優化區塊，您可以直接複製覆蓋原本的 @media 區塊 */
+  /* 2. 調整預覽區高度與觸控 */
   .preview-pane {
-    height: 50vh; 
+    height: 40vh; /*稍微縮小高度，讓下面露出更多內容 */
     flex: none;
     border-bottom: 2px solid #ddd;
-    overscroll-behavior: none; 
-    touch-action: none; 
+    /* [重要改動] 允許在預覽區空白處滑動網頁，不然手指沒地方滑 */
+    touch-action: pan-y; 
+    overscroll-behavior: contain;
+  }
+  
+  /* 只有紅框框禁止捲動 (為了拖曳) */
+  .mask-box {
+    touch-action: none;
   }
 
+  /* 3. 取消控制面板的固定高度 */
+  .control-pane {
+    width: 100%;
+    border: none;
+    height: auto;
+    overflow: visible;
+    padding-bottom: 20px; /* 底部只需要一點點留白 */
+  }
+
+  /* 4. [關鍵修正] 底部操作區 "取消固定" */
+  /* 改成自然排列在最下方，這樣就不會擋住上面的按鈕了 */
+  .action-bar {
+    position: static; /* 取消 fixed */
+    width: 100%;
+    margin-top: 20px;
+    box-shadow: none;
+    border-top: 1px solid #eee;
+    padding: 20px;
+    background: #f9f9f9;
+  }
+
+  /* 優化按鈕大小 */
   .resize-handle {
     width: 24px;
     height: 24px;
-    border-width: 2px; 
-    border-radius: 50%; 
+    border-width: 2px;
+    border-radius: 50%;
     background: white;
     box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    /* 修正圓點位置 */
+    margin-left: -12px; 
+    margin-top: -12px; 
   }
+  /* 重新校正 8 個點的位置 */
+  .n { top: 0; left: 50%; }
+  .s { bottom: 0; left: 50%; }
+  .w { top: 50%; left: 0; }
+  .e { top: 50%; right: 0; }
+  .nw { top: 0; left: 0; }
+  .ne { top: 0; right: 0; }
+  .sw { bottom: 0; left: 0; }
+  .se { bottom: 0; right: 0; }
 
-  .n { top: -12px; margin-left: -12px; }
-  .s { bottom: -12px; margin-left: -12px; }
-  .w { left: -12px; margin-top: -12px; }
-  .e { right: -12px; margin-top: -12px; }
-  .nw { top: -12px; left: -12px; }
-  .ne { top: -12px; right: -12px; }
-  .sw { bottom: -12px; left: -12px; }
-  .se { bottom: -12px; right: -12px; }
-
-  .control-pane {
-    width: 100%;
-    border-left: none;
-    border-top: none;
-    height: auto;
-    overflow: visible;
-    padding-bottom: 100px; /* 加大底部空間，避免被按鈕擋住 */
-  }
-
+  /* 加大介面元素 */
   .mode-btn, 
   .grid-btn, 
   .color-dropdown-btn,
   .file-upload-btn,
   input[type="range"],
-  select {
-    min-height: 44px; 
-    font-size: 14px; 
+  select,
+  input[type="text"] {
+    min-height: 44px;
+    font-size: 15px;
   }
 
   .grid-selector {
-    width: 100%; 
+    width: 100%;
     gap: 8px;
   }
   .grid-btn {
-    height: 40px;
+    height: 45px;
   }
   
-  input[type="range"] {
-    height: 30px; 
-  }
-
-  .action-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    z-index: 100;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-    padding: 10px 15px;
-    background: #f9f9f9; 
-    box-sizing: border-box; /* 確保寬度計算正確 */
-  }
-  
+  /* 顏色選單 */
   .color-popup {
-    width: 90%; 
+    width: 90%;
     left: 5%;
+    position: fixed; /* 顏色彈窗保持置中 */
+    top: 50%;
+    transform: translateY(-50%);
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
   }
 }
+
