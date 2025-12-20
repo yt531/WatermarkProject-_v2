@@ -428,42 +428,22 @@ button.primary-btn:disabled {
 
 /* --- 手機版專用優化 (請覆蓋 style.css 最下方的同名區塊) --- */
 @media (max-width: 768px) {
-  /* 1. 讓網頁可以正常捲動，並防止左右晃動 */
-  body {
-    height: auto;
-    overflow-x: hidden;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .main-workspace {
-    flex-direction: column;
-    overflow: visible;
-    height: auto;
-    display: block;
-  }
-
-  /* 2. 預覽區設定 */
-  .preview-pane {
-    height: 40vh; /* 高度佔螢幕 40%，留更多空間給下方操作 */
-    flex: none;
-    border-bottom: 2px solid #ddd;
-    touch-action: pan-y; 
-    overscroll-behavior: contain;
-  }
-  
-  .mask-box {
-    touch-action: none; /* 紅框框內禁止捲動，保留給拖曳用 */
-  }
-
-  /* 3. [關鍵修正] 控制面板底部加高 */
-  .control-pane {
-    width: 100%;
-    border: none;
-    height: auto;
-    overflow: visible;
-    /* ⚠️ 這裡改成 150px，確保按鈕下面有足夠的空白，不會被手機導航列擋住 */
-    padding-bottom: 150px !important; 
+   /* 1. 優化後的底部操作區 */
+  .action-bar {
+    position: static;
+    width: auto;  /* 1. 改成自動寬度，這樣 margin 才會生效 */
+    
+    /* 2. 關鍵修改：左右加上 15px 邊距，與上方的 fieldset (黃框) 對齊 */
+    margin: 20px 15px; 
+    
+    padding: 15px;
+    background: #f9f9f9;
+    
+    /* 3. 視覺微調：加上與上方類似的邊框與圓角，看起來更像一家人 */
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    box-shadow: none; 
+    box-sizing: border-box;
   }
 
   /* 4. 底部操作區樣式優化 */
