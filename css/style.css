@@ -443,7 +443,7 @@ button.primary-btn:disabled {
   opacity: 0.9;
 }
 
-/* --- 手機版專用優化 (最終完美版) --- */
+/* --- 手機版專用優化 (最終修正版：解決白框置中) --- */
 @media (max-width: 768px) {
   
   /* 1. 強制垂直排列 */
@@ -465,6 +465,13 @@ button.primary-btn:disabled {
   .preview-pane {
     height: 40vh; /* 高度佔螢幕 40% */
     width: 100%;
+    
+    /* [新增] 修正置中問題 */
+    box-sizing: border-box; 
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    
     flex: none;
     border-bottom: 2px solid #ddd;
     touch-action: pan-y; 
