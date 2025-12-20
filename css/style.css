@@ -426,65 +426,72 @@ button.primary-btn:disabled {
   opacity: 0.9;
 }
 
-/* --- 手機版專用優化 (請覆蓋 style.css 最下方的同名區塊) --- */
+/* --- 手機版專用優化 (最終修復版) --- */
 @media (max-width: 768px) {
-   /* 1. 優化後的底部操作區 */
+  
+  /* 1. 【關鍵修復】強制垂直排列，救回消失的預覽區 */
+  .main-workspace {
+    display: flex !important;           /* 強制使用 Flex */
+    flex-direction: column !important;  /* 強制垂直排列 (上下) */
+    overflow: visible;
+    height: auto;
+  }
+
+  body {
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 2. 預覽區設定 */
+  .preview-pane {
+    height: 40vh; /* 高度佔螢幕 40% */
+    width: 100%;  /* 寬度佔滿 */
+    flex: none;   /* 禁止縮放 */
+    border-bottom: 2px solid #ddd;
+    touch-action: pan-y; 
+    overscroll-behavior: contain;
+  }
+
+  /* 3. 控制面板設定 */
+  .control-pane {
+    width: 100%;
+    border: none;
+    height: auto;
+    overflow: visible;
+    /* 底部預留空間，確保按鈕不會貼底 */
+    padding-bottom: 120px !important; 
+  }
+
+  /* 4. 【對齊修復】底部操作區 (紅框對齊黃框) */
   .action-bar {
-    position: static;
-    width: auto;  /* 1. 改成自動寬度，這樣 margin 才會生效 */
+    position: static; /* 取消固定定位 */
     
-    /* 2. 關鍵修改：左右加上 15px 邊距，與上方的 fieldset (黃框) 對齊 */
-    margin: 20px 15px; 
+    /* 關鍵：左右留 15px 邊距 */
+    /* 因為上方的 .panel-section 有 padding: 15px，所以內容是從 15px 開始 */
+    /* 這裡我們直接設定 margin: 15px，就能讓左右邊界完美對齊 */
+    margin: 15px; 
+    width: auto; /* 寬度自動計算 (螢幕寬 - 30px) */
     
     padding: 15px;
     background: #f9f9f9;
-    
-    /* 3. 視覺微調：加上與上方類似的邊框與圓角，看起來更像一家人 */
-    border: 1px solid #d0d0d0;
+    border: 1px solid #d0d0d0; /* 加上與上方一樣的邊框 */
     border-radius: 4px;
-    box-shadow: none; 
-    box-sizing: border-box;
-  }
-
-  /* 4. 底部操作區樣式優化 */
-  .action-bar {
-    position: static; /* 讓它自然排列，不要固定在螢幕底部 */
-    width: 100%;
-    margin-top: 20px;
-    padding: 20px;
-    background: #f9f9f9;
-    border-top: 1px solid #eee;
-    box-sizing: border-box; /* 確保內距不會撐大寬度 */
-    
-    /* 增加一點圓角和陰影，讓它看起來像一個獨立區塊 */
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    margin-bottom: 20px; /* 區塊本身也離底部遠一點 */
-  }
-
-  /* 輸入框與按鈕排版微調 */
-  #outputFileName {
-    min-width: 0; /* 防止輸入框在小螢幕被撐開 */
-  }
-  
-  /* 加大綠色按鈕，讓它更顯眼好按 */
-  #dlBtn {
-    margin-top: 15px; /* 離上面的輸入框遠一點 */
-    height: 50px;     /* 加高按鈕 */
-    font-size: 18px;  /* 加大文字 */
+    box-shadow: none;
   }
 
   /* --- 以下維持原本的手機版優化設定 --- */
+  .mask-box { touch-action: none; }
+  
   .resize-handle {
-    width: 24px;
-    height: 24px;
-    border-width: 2px;
-    border-radius: 50%;
+    width: 24px; height: 24px;
+    border-width: 2px; border-radius: 50%;
     background: white;
     box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-    margin-left: -12px; 
-    margin-top: -12px; 
+    margin-left: -12px; margin-top: -12px; 
   }
+  /* 校正 8 點位置 */
   .n { top: 0; left: 50%; }
   .s { bottom: 0; left: 50%; }
   .w { top: 50%; left: 0; }
@@ -494,31 +501,22 @@ button.primary-btn:disabled {
   .sw { bottom: 0; left: 0; }
   .se { bottom: 0; right: 0; }
 
-  .mode-btn, 
-  .grid-btn, 
-  .color-dropdown-btn,
-  .file-upload-btn,
-  input[type="range"],
-  select,
-  input[type="text"] {
+  /* 加大介面元素好按 */
+  .mode-btn, .grid-btn, .color-dropdown-btn, 
+  .file-upload-btn, input[type="range"], select, input[type="text"] {
     min-height: 44px;
     font-size: 15px;
   }
 
-  .grid-selector {
-    width: 100%;
-    gap: 8px;
-  }
-  .grid-btn {
-    height: 45px;
-  }
+  .grid-selector { width: 100%; gap: 8px; }
+  .grid-btn { height: 45px; }
   
+  #dlBtn { margin-top: 15px; height: 50px; font-size: 18px; }
+
   .color-popup {
-    width: 90%;
-    left: 5%;
-    position: fixed;
-    top: 50%;
-    transform: translateY(-50%);
+    width: 90%; left: 5%;
+    position: fixed; top: 50%; transform: translateY(-50%);
     box-shadow: 0 0 20px rgba(0,0,0,0.3);
   }
 }
+
