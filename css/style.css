@@ -426,123 +426,95 @@ button.primary-btn:disabled {
   opacity: 0.9;
 }
 
-/* --- 手機版專用優化 (貼在 style.css 最下方) --- */
+/* --- 手機版專用優化 --- */
 @media (max-width: 768px) {
   body {
     height: auto;
-    overflow-x: hidden; /* 防止左右滑動 */
+    overflow-x: hidden;       /* 保持水平不滑動 */
+    overflow-y: auto !important; /* ⚠️ [新增這行] 強制允許垂直捲動 */
+    -webkit-overflow-scrolling: touch; /* 讓 iOS 捲動更滑順 */
   }
 
+  /* 確保主工作區也能正確延伸 */
   .main-workspace {
     flex-direction: column;
-    overflow-y: visible; /* 讓手機版可以自然捲動 */
+    overflow: visible; 
+    height: auto;      
   }
 
-  /* 1. 優化預覽區體驗 */
+  /* (原本的其他設定保持不變...) */
+  /* 以下為完整的手機版優化區塊，您可以直接複製覆蓋原本的 @media 區塊 */
   .preview-pane {
-    height: 50vh; /* 佔用螢幕一半高度，確保看得到預覽 */
+    height: 50vh; 
     flex: none;
     border-bottom: 2px solid #ddd;
-    /* 關鍵：防止手指拖曳遮罩時，整個網頁跟著上下彈動 (iOS Safari 特別重要) */
-    overscroll-behavior: none;
-    touch-action: none;
+    overscroll-behavior: none; 
+    touch-action: none; 
   }
 
-  /* 2. 加大紅框的控制點 (Resize Handles) */
-  /* 手指比滑鼠粗，原本 10px 太難按，改為 24px */
   .resize-handle {
     width: 24px;
     height: 24px;
-    border-width: 2px; /* 加粗邊框讓視覺更明顯 */
-    border-radius: 50%; /* 改成圓形比較好看且好按 */
+    border-width: 2px; 
+    border-radius: 50%; 
     background: white;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
   }
 
-  /* 因為控制點變大了，需要重新校正位置 (24px的一半是12px) */
-  .n {
-    top: -12px;
-    margin-left: -12px;
-  }
-  .s {
-    bottom: -12px;
-    margin-left: -12px;
-  }
-  .w {
-    left: -12px;
-    margin-top: -12px;
-  }
-  .e {
-    right: -12px;
-    margin-top: -12px;
-  }
-  .nw {
-    top: -12px;
-    left: -12px;
-  }
-  .ne {
-    top: -12px;
-    right: -12px;
-  }
-  .sw {
-    bottom: -12px;
-    left: -12px;
-  }
-  .se {
-    bottom: -12px;
-    right: -12px;
-  }
+  .n { top: -12px; margin-left: -12px; }
+  .s { bottom: -12px; margin-left: -12px; }
+  .w { left: -12px; margin-top: -12px; }
+  .e { right: -12px; margin-top: -12px; }
+  .nw { top: -12px; left: -12px; }
+  .ne { top: -12px; right: -12px; }
+  .sw { bottom: -12px; left: -12px; }
+  .se { bottom: -12px; right: -12px; }
 
-  /* 3. 優化控制面板 */
   .control-pane {
     width: 100%;
     border-left: none;
     border-top: none;
     height: auto;
     overflow: visible;
-    padding-bottom: 80px; /* 預留底部空間給按鈕 */
+    padding-bottom: 100px; /* 加大底部空間，避免被按鈕擋住 */
   }
 
-  /* 4. 加大按鈕觸控區域 (符合 Apple/Google 設計規範的最小 44px) */
-  .mode-btn,
-  .grid-btn,
+  .mode-btn, 
+  .grid-btn, 
   .color-dropdown-btn,
   .file-upload-btn,
   input[type="range"],
   select {
-    min-height: 44px;
-    font-size: 14px; /* 字體稍微加大 */
+    min-height: 44px; 
+    font-size: 14px; 
   }
 
-  /* 九宮格按鈕加大 */
   .grid-selector {
-    width: 100%; /* 讓九宮格寬一點 */
+    width: 100%; 
     gap: 8px;
   }
   .grid-btn {
     height: 40px;
   }
-
-  /* 讓滑桿更好拉 */
+  
   input[type="range"] {
-    height: 30px; /* 增加滑桿感應區高度 */
+    height: 30px; 
   }
 
-  /* 讓「另存新檔」按鈕固定在底部，方便操作 */
   .action-bar {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
     z-index: 100;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     padding: 10px 15px;
-    background: #f9f9f9; /* 確保不透明 */
+    background: #f9f9f9; 
+    box-sizing: border-box; /* 確保寬度計算正確 */
   }
-
-  /* 修正彈出顏色選單的位置 */
+  
   .color-popup {
-    width: 90%; /* 手機上寬度設為 90% */
+    width: 90%; 
     left: 5%;
   }
 }
