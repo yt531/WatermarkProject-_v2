@@ -1,802 +1,524 @@
-// --- [新增] 簡易驗證邏輯 ---
-const correctUser = "abcde";  // ⚠️ 請修改您的帳號
-const correctPass = "12345";   // ⚠️ 請修改您的密碼
-
-function checkLogin() {
-  const u = document.getElementById("loginUser").value;
-  const p = document.getElementById("loginPass").value;
-  const errorMsg = document.getElementById("loginError");
-  const overlay = document.getElementById("loginOverlay");
-
-  // 檢查是否符合
-  if (u === correctUser && p === correctPass) {
-    // 密碼正確：隱藏遮罩
-    overlay.style.opacity = "0";
-    overlay.style.transition = "opacity 0.5s";
-    setTimeout(() => {
-      overlay.style.display = "none";
-    }, 500);
-  } else {
-    // 密碼錯誤：顯示紅字
-    errorMsg.style.display = "block";
-    
-    // 加入錯誤震動效果
-    document.querySelector(".login-card").animate([
-      { transform: 'translateX(0)' },
-      { transform: 'translateX(-10px)' },
-      { transform: 'translateX(10px)' },
-      { transform: 'translateX(0)' }
-    ], { duration: 300 });
-  }
+:root {
+  --primary: #2b579a;
+  --bg: #f3f2f1;
+  --panel-bg: #ffffff;
+  --border: #e1dfdd;
+}
+body {
+  font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+  background-color: var(--bg);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
-// --- 全域變數 ---
-let files = [];
-let previewImg = new Image();
-let currentMode = "single";
-let currentPos = "middle-center";
-let usageMode = "general"; // 'general' | 'idcard'
-let isLoaded = false;
-let savedColor = "#FF0000";
-
-let lastJobSignature = null;
-let lastOutputName = "";
-
-const canvas = document.getElementById("previewCanvas");
-const ctx = canvas.getContext("2d");
-const maskBox = document.getElementById("safeZoneBox");
-
-// 色票
-const themeColors = [
-  [
-    "#FFFFFF",
-    "#000000",
-    "#E7E6E6",
-    "#44546A",
-    "#5B9BD5",
-    "#ED7D31",
-    "#A5A5A5",
-    "#FFC000",
-    "#4472C4",
-    "#70AD47",
-  ],
-  [
-    "#F2F2F2",
-    "#7F7F7F",
-    "#D0CECE",
-    "#D6DCE4",
-    "#DEEBF6",
-    "#FBE5D5",
-    "#EDEDED",
-    "#FFF2CC",
-    "#D9E1F2",
-    "#E2EFDA",
-  ],
-  [
-    "#D9D9D9",
-    "#595959",
-    "#AEABAB",
-    "#ADB9CA",
-    "#BDD7EE",
-    "#F8CBAD",
-    "#DBDBDB",
-    "#FFE699",
-    "#B4C6E7",
-    "#C6E0B4",
-  ],
-  [
-    "#BFBFBF",
-    "#3F3F3F",
-    "#757171",
-    "#8497B0",
-    "#9CC2E5",
-    "#F4B084",
-    "#C9C9C9",
-    "#FFD966",
-    "#8EA9DB",
-    "#A9D08E",
-  ],
-  [
-    "#A6A6A6",
-    "#262626",
-    "#3A3838",
-    "#333F4F",
-    "#2F5597",
-    "#C65911",
-    "#7B7B7B",
-    "#BF9000",
-    "#305496",
-    "#548235",
-  ],
-  [
-    "#7F7F7F",
-    "#0C0C0C",
-    "#161616",
-    "#222B35",
-    "#203764",
-    "#833C0C",
-    "#525252",
-    "#806000",
-    "#203864",
-    "#375623",
-  ],
-];
-const standardColors = [
-  "#C00000",
-  "#FF0000",
-  "#FFC000",
-  "#FFFF00",
-  "#92D050",
-  "#00B050",
-  "#00B0F0",
-  "#0070C0",
-  "#002060",
-  "#7030A0",
-];
-
-document.addEventListener("DOMContentLoaded", () => {
-  syncColor("hex");
-  initColorGrid();
-  document.addEventListener("click", (e) => {
-    if (!document.querySelector(".color-control-wrapper").contains(e.target)) {
-      document.getElementById("colorPopup").style.display = "none";
-    }
-  });
-
-  initDraggableMask();
-  const resizeObserver = new ResizeObserver(() => update());
-  resizeObserver.observe(maskBox);
-});
-
-// --- 8方向拖曳與縮放 ---
-function initDraggableMask() {
-  let state = null; // 'move' 或 'resize'
-  let resizeDir = "";
-
-  let startX, startY;
-  let startLeft, startTop, startWidth, startHeight;
-
-  const startAction = (e) => {
-    if (e.target.classList.contains("resize-handle")) {
-      state = "resize";
-      resizeDir = e.target.getAttribute("data-dir");
-    } else if (
-      e.target.id === "safeZoneBox" ||
-      e.target.parentNode.id === "safeZoneBox"
-    ) {
-      state = "move";
-    } else {
-      return;
-    }
-
-    const clientX = e.type.includes("touch") ? e.touches[0].clientX : e.clientX;
-    const clientY = e.type.includes("touch") ? e.touches[0].clientY : e.clientY;
-
-    startX = clientX;
-    startY = clientY;
-
-    startLeft = maskBox.offsetLeft;
-    startTop = maskBox.offsetTop;
-    startWidth = maskBox.offsetWidth;
-    startHeight = maskBox.offsetHeight;
-
-    e.preventDefault();
-  };
-
-  const doAction = (e) => {
-    if (!state) return;
-    const clientX = e.type.includes("touch") ? e.touches[0].clientX : e.clientX;
-    const clientY = e.type.includes("touch") ? e.touches[0].clientY : e.clientY;
-
-    const dx = clientX - startX;
-    const dy = clientY - startY;
-
-    if (state === "move") {
-      let newLeft = startLeft + dx;
-      let newTop = startTop + dy;
-      const maxLeft = canvas.clientWidth - startWidth;
-      const maxTop = canvas.clientHeight - startHeight;
-
-      if (newLeft < 0) newLeft = 0;
-      if (newTop < 0) newTop = 0;
-      if (newLeft > maxLeft) newLeft = maxLeft;
-      if (newTop > maxTop) newTop = maxTop;
-
-      maskBox.style.left = newLeft + "px";
-      maskBox.style.top = newTop + "px";
-    } else if (state === "resize") {
-      let newW = startWidth;
-      let newH = startHeight;
-      let newL = startLeft;
-      let newT = startTop;
-
-      if (resizeDir.includes("e")) newW = startWidth + dx;
-      if (resizeDir.includes("w")) {
-        newW = startWidth - dx;
-        newL = startLeft + dx;
-      }
-      if (resizeDir.includes("s")) newH = startHeight + dy;
-      if (resizeDir.includes("n")) {
-        newH = startHeight - dy;
-        newT = startTop + dy;
-      }
-
-      if (newW < 20) {
-        if (resizeDir.includes("w")) newL = startLeft + startWidth - 20;
-        newW = 20;
-      }
-      if (newH < 20) {
-        if (resizeDir.includes("n")) newT = startTop + startHeight - 20;
-        newH = 20;
-      }
-
-      if (newL < 0) {
-        newW += newL;
-        newL = 0;
-      }
-      if (newT < 0) {
-        newH += newT;
-        newT = 0;
-      }
-      if (newL + newW > canvas.clientWidth) newW = canvas.clientWidth - newL;
-      if (newT + newH > canvas.clientHeight) newH = canvas.clientHeight - newT;
-
-      maskBox.style.width = newW + "px";
-      maskBox.style.height = newH + "px";
-      maskBox.style.left = newL + "px";
-      maskBox.style.top = newT + "px";
-    }
-    update();
-  };
-
-  const stopAction = () => {
-    state = null;
-  };
-
-  maskBox.addEventListener("mousedown", startAction);
-  maskBox.addEventListener("touchstart", startAction);
-  window.addEventListener("mousemove", doAction);
-  window.addEventListener("touchmove", doAction, { passive: false });
-  window.addEventListener("mouseup", stopAction);
-  window.addEventListener("touchend", stopAction);
+header {
+  background-color: var(--primary);
+  color: white;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: normal;
 }
 
-// --- 用途模式切換 ---
-function setUsageMode(mode) {
-  usageMode = mode;
-  document.getElementById("btnModeGeneral").className =
-    mode === "general" ? "mode-btn active" : "mode-btn";
-  document.getElementById("btnModeID").className =
-    mode === "idcard" ? "mode-btn active" : "mode-btn";
-  document.getElementById("idModeHint").style.display =
-    mode === "idcard" ? "block" : "none";
-
-  maskBox.style.display = mode === "idcard" && isLoaded ? "block" : "none";
-  if (mode === "idcard") setMode("tiled");
-  else setMode("single");
-  update();
+.main-workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.preview-pane {
+  flex: 1;
+  background-color: #e3e5e8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: auto;
+  position: relative;
+  touch-action: none;
+}
+.canvas-container {
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  background: white;
+  max-width: 100%;
+  max-height: 100%;
+  border: 1px solid #ccc;
+  pointer-events: none; /* 讓事件穿透到遮罩 */
+}
+.control-pane {
+  width: 380px;
+  background-color: var(--panel-bg);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
-function handleFiles() {
-  const input = document.getElementById("fileInput");
-  files = Array.from(input.files);
-  lastJobSignature = null;
-  if (files.length === 0) return;
-
-  document.getElementById(
-    "fileInfo"
-  ).innerText = `已選擇 ${files.length} 個檔案`;
-  document.getElementById("dlBtn").disabled = false;
-  document.getElementById("welcomeMsg").style.display = "none";
-
-  if (files[0].type === "application/pdf") {
-    renderPdfToPreview(files[0]);
-  } else {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      previewImg.src = e.target.result;
-    };
-    reader.readAsDataURL(files[0]);
-  }
-
-  previewImg.onload = () => {
-    isLoaded = true;
-    if (usageMode === "idcard") maskBox.style.display = "block";
-    update();
-    
-    // [手機版優化] 載入後自動捲回頂端預覽
-    if (window.innerWidth <= 768) {
-      document.getElementById("previewPane").scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
-      });
-    }
-  };
+/* --- 安全遮罩框 (8點控制版) --- */
+.mask-box {
+  position: absolute;
+  top: 20%;
+  left: 20%;
+  width: 150px;
+  height: 150px;
+  background-color: rgba(255, 0, 0, 0.15);
+  border: 1px dashed red;
+  cursor: move;
+  box-sizing: border-box;
+  z-index: 10;
+  min-width: 20px;
+  min-height: 20px;
+}
+.mask-label {
+  background: red;
+  color: white;
+  font-size: 10px;
+  padding: 2px 4px;
+  position: absolute;
+  top: -20px;
+  left: 0;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
-async function renderPdfToPreview(file) {
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-    const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale: 1.5 });
-    const c = document.createElement("canvas");
-    const cx = c.getContext("2d");
-    c.width = viewport.width;
-    c.height = viewport.height;
-    await page.render({ canvasContext: cx, viewport: viewport }).promise;
-    previewImg.src = c.toDataURL("image/jpeg");
-  } catch (e) {
-    console.error(e);
-    previewImg.src = createWhitePlaceholder(600, 800);
-  }
+/* 調整手柄 */
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border: 1px solid red;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+  z-index: 11;
+}
+.n {
+  top: -5px;
+  left: 50%;
+  margin-left: -5px;
+  cursor: n-resize;
+}
+.s {
+  bottom: -5px;
+  left: 50%;
+  margin-left: -5px;
+  cursor: s-resize;
+}
+.w {
+  left: -5px;
+  top: 50%;
+  margin-top: -5px;
+  cursor: w-resize;
+}
+.e {
+  right: -5px;
+  top: 50%;
+  margin-top: -5px;
+  cursor: e-resize;
+}
+.nw {
+  top: -5px;
+  left: -5px;
+  cursor: nw-resize;
+}
+.ne {
+  top: -5px;
+  right: -5px;
+  cursor: ne-resize;
+}
+.sw {
+  bottom: -5px;
+  left: -5px;
+  cursor: sw-resize;
+}
+.se {
+  bottom: -5px;
+  right: -5px;
+  cursor: se-resize;
 }
 
-function createWhitePlaceholder(w, h) {
-  const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
-  const cx = c.getContext("2d");
-  cx.fillStyle = "white";
-  cx.fillRect(0, 0, w, h);
-  return c.toDataURL();
+/* Controls */
+.panel-section {
+  padding: 15px;
+  border-bottom: 1px solid var(--border);
+}
+fieldset {
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  margin: 0 0 15px 0;
+  padding: 10px;
+}
+legend {
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: bold;
+  padding: 0 5px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+label {
+  font-size: 13px;
+  min-width: 60px;
+  color: #444;
+}
+input[type="text"],
+input[type="number"],
+select {
+  padding: 4px 8px;
+  border: 1px solid #888;
+  border-radius: 3px;
+  font-size: 13px;
+}
+input[type="text"]:focus,
+input[type="number"]:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+.slider-group {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 5px;
+}
+input[type="range"] {
+  flex: 1;
+  cursor: pointer;
+}
+input.num-input {
+  width: 50px;
+  text-align: right;
 }
 
-function setMode(mode) {
-  currentMode = mode;
-  document.getElementById("btnSingle").className =
-    mode === "single" ? "mode-btn active" : "mode-btn";
-  document.getElementById("btnTiled").className =
-    mode === "tiled" ? "mode-btn active" : "mode-btn";
-  document.getElementById("singleControls").style.display =
-    mode === "single" ? "block" : "none";
-  document.getElementById("tiledControls").style.display =
-    mode === "tiled" ? "block" : "none";
-  update();
+/* Color Picker */
+.color-control-wrapper {
+  position: relative;
+}
+.color-dropdown-btn {
+  width: 100%;
+  padding: 8px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.2s;
+}
+.color-dropdown-btn:hover {
+  background-color: #f0f0f0;
+  border-color: var(--primary);
+}
+.color-preview-box {
+  width: 24px;
+  height: 24px;
+  background-color: #eee;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border-bottom: 4px solid #ff0000;
+  font-family: serif;
+}
+.btn-text {
+  font-size: 13px;
+  color: #444;
+}
+.color-popup {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #aaa;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  width: 230px;
+  border-radius: 4px;
+  margin-top: 5px;
+}
+.color-section-title {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 2px;
+  margin-bottom: 10px;
+}
+.standard-grid {
+  margin-bottom: 5px;
+}
+.swatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.swatch:hover {
+  transform: scale(1.2);
+  border: 1px solid #f29b38;
+  background-clip: padding-box;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+  z-index: 1;
+}
+.color-divider {
+  height: 1px;
+  background: #eee;
+  margin: 8px 0;
+}
+.custom-color-panel {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+.rgb-inputs {
+  display: flex;
+  gap: 5px;
+}
+.rgb-inputs input {
+  width: 100%;
 }
 
-function setPos(pos) {
-  currentPos = pos;
-  document
-    .querySelectorAll(".grid-btn")
-    .forEach((b) => b.classList.remove("active"));
-  const t = document.getElementById("btn-" + pos);
-  if (t) t.classList.add("active");
-  update();
+/* Grid Selector */
+.grid-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  width: 100px;
+}
+.grid-btn {
+  height: 25px;
+  border: 1px solid #ccc;
+  background: #f0f0f0;
+  cursor: pointer;
+}
+.grid-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
 }
 
-function syncNum(id, val) {
-  document.getElementById(id + "Num").value = val;
-  update();
+/* Buttons */
+.file-upload-btn {
+  background: var(--primary);
+  color: white;
+  text-align: center;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  display: block;
 }
-function syncRange(id, val) {
-  document.getElementById(id + "Range").value = val;
-  update();
+.file-upload-btn:hover {
+  background: #1e3f72;
 }
-
-function initColorGrid() {
-  const tG = document.getElementById("themeColorGrid");
-  const sG = document.getElementById("standardColorGrid");
-  themeColors.forEach((r) => r.forEach((c) => tG.appendChild(createSwatch(c))));
-  standardColors.forEach((c) => sG.appendChild(createSwatch(c)));
+input[type="file"] {
+  display: none;
 }
-function createSwatch(c) {
-  const d = document.createElement("div");
-  d.className = "swatch";
-  d.style.backgroundColor = c;
-  d.title = c;
-  d.onmouseenter = () => tempUpdatePreview(c);
-  d.onmouseleave = () => tempUpdatePreview(savedColor);
-  d.onclick = () => {
-    savedColor = c;
-    updateInputValues(c);
-    toggleColorMenu();
-    update();
-  };
-  return d;
+.action-bar {
+  padding: 15px;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  background: #f9f9f9;
 }
-function toggleColorMenu() {
-  const p = document.getElementById("colorPopup");
-  p.style.display = p.style.display === "none" ? "block" : "none";
-  if (p.style.display === "block")
-    savedColor = document.getElementById("colorHex").value;
+button.primary-btn {
+  width: 100%;
+  padding: 12px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
 }
-function toggleCustomColor() {
-  const p = document.getElementById("customColorPanel");
-  p.style.display = p.style.display === "none" ? "block" : "none";
+button.primary-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
-function tempUpdatePreview(hex) {
-  document.getElementById("colorHex").value = hex;
-  document.getElementById("currentColorBox").style.borderBottomColor = hex;
-  document.getElementById("currentColorBox").style.color = hex;
-  update();
+.mode-switch {
+  display: flex;
+  background: #eee;
+  border-radius: 4px;
+  padding: 2px;
+  margin-bottom: 10px;
 }
-function updateInputValues(hex) {
-  document.getElementById("colorHex").value = hex;
-  const rgb = hexToRgb(hex);
-  document.getElementById("colorR").value = rgb.r;
-  document.getElementById("colorG").value = rgb.g;
-  document.getElementById("colorB").value = rgb.b;
-  document.getElementById("currentColorBox").style.borderBottomColor = hex;
-  document.getElementById("currentColorBox").style.color = hex;
+.mode-btn {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 13px;
 }
-function syncColor(src) {
-  const picker = document.getElementById("colorPicker");
-  const hexIn = document.getElementById("colorHex");
-  const rIn = document.getElementById("colorR");
-  const gIn = document.getElementById("colorG");
-  const bIn = document.getElementById("colorB");
-  let r, g, b, hex;
-  if (src === "picker") {
-    hex = picker.value;
-    const c = hexToRgb(hex);
-    r = c.r;
-    g = c.g;
-    b = c.b;
-  } else if (src === "hex") {
-    hex = hexIn.value;
-    if (!/^#[0-9A-F]{6}$/i.test(hex)) return;
-    const c = hexToRgb(hex);
-    r = c.r;
-    g = c.g;
-    b = c.b;
-  } else if (src === "rgb") {
-    r = parseInt(rIn.value) || 0;
-    g = parseInt(gIn.value) || 0;
-    b = parseInt(bIn.value) || 0;
-    hex = rgbToHex(r, g, b);
-  }
-  if (src !== "picker") picker.value = hex;
-  if (src !== "hex") hexIn.value = hex;
-  if (src !== "rgb") {
-    rIn.value = r;
-    gIn.value = g;
-    bIn.value = b;
-  }
-  savedColor = hex;
-  document.getElementById("currentColorBox").style.borderBottomColor = hex;
-  document.getElementById("currentColorBox").style.color = hex;
-  update();
+.mode-btn.active {
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  font-weight: bold;
+  color: var(--primary);
 }
 
-function getParams() {
-  let mask = null;
-  if (usageMode === "idcard" && maskBox.style.display !== "none") {
-    const rect = maskBox.getBoundingClientRect();
-    mask = {
-      x: maskBox.offsetLeft / canvas.clientWidth,
-      y: maskBox.offsetTop / canvas.clientHeight,
-      w: maskBox.offsetWidth / canvas.clientWidth,
-      h: maskBox.offsetHeight / canvas.clientHeight,
-    };
+/* --- 簡易登入系統樣式 --- */
+#loginOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9); /* 深色背景擋住後面 */
+  z-index: 9999; /* 確保在最上層 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(5px); /* 背景模糊效果 */
+}
+
+.login-card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 80%;
+  max-width: 320px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+.login-card input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.login-btn:active {
+  opacity: 0.9;
+}
+
+/* --- 手機版專用優化 (貼在 style.css 最下方) --- */
+@media (max-width: 768px) {
+  body {
+    height: auto;
+    overflow-x: hidden; /* 防止左右滑動 */
   }
 
-  return {
-    text: document.getElementById("wmText").value,
-    font: document.getElementById("wmFont").value,
-    color: document.getElementById("colorHex").value,
-    size: parseInt(document.getElementById("sizeNum").value),
-    rotate: parseInt(document.getElementById("rotNum").value),
-    opacity: parseInt(document.getElementById("opNum").value) / 100,
-    gap: parseInt(document.getElementById("gapNum").value),
-    pos: currentPos,
-    mask: mask,
-  };
-}
-
-// 核心繪圖函式 (修正版：正確的挖空邏輯)
-function applyWatermarkToCanvas(targetCtx, width, height, p) {
-  const basePx = width / 20;
-  const fontSize = basePx * (p.size / 50);
-
-  targetCtx.save();
-
-  // 如果有遮罩，定義裁切區域
-  if (p.mask) {
-    targetCtx.beginPath();
-    // 1. 畫出整個畫布矩形
-    targetCtx.rect(0, 0, width, height);
-
-    // 2. 畫出遮罩矩形
-    const mx = p.mask.x * width;
-    const my = p.mask.y * height;
-    const mw = p.mask.w * width;
-    const mh = p.mask.h * height;
-    targetCtx.rect(mx, my, mw, mh);
-
-    // 3. 使用 evenodd 規則：兩個矩形重疊處會變成"洞" (不繪製)
-    targetCtx.clip("evenodd");
+  .main-workspace {
+    flex-direction: column;
+    overflow-y: visible; /* 讓手機版可以自然捲動 */
   }
 
-  targetCtx.font = `bold ${fontSize}px "${p.font}"`;
-  targetCtx.fillStyle = p.color;
-  targetCtx.globalAlpha = p.opacity;
-  targetCtx.textBaseline = "middle";
-  targetCtx.textAlign = "center";
-
-  if (currentMode === "single") {
-    const textW = targetCtx.measureText(p.text).width;
-    let x, y;
-    const [v, h] = p.pos.split("-");
-    const margin = fontSize;
-    if (h === "left") x = margin + textW / 2;
-    else if (h === "right") x = width - margin - textW / 2;
-    else x = width / 2;
-    if (v === "top") y = margin + fontSize / 2;
-    else if (v === "bottom") y = height - margin - fontSize / 2;
-    else y = height / 2;
-    targetCtx.translate(x, y);
-    targetCtx.rotate((p.rotate * Math.PI) / 180);
-    targetCtx.fillText(p.text, 0, 0);
-  } else {
-    const gapPx = (p.gap / 100) * fontSize * 4;
-    const cols = Math.ceil(width / gapPx) + 2;
-    const rows = Math.ceil(height / gapPx) + 2;
-    for (let i = -1; i < cols; i++) {
-      for (let j = -1; j < rows; j++) {
-        const x = i * gapPx;
-        let y = j * gapPx;
-        if (j % 2 !== 0) xOffset = gapPx / 2;
-        else xOffset = 0;
-        targetCtx.save();
-        targetCtx.translate(x + xOffset, y);
-        targetCtx.rotate((p.rotate * Math.PI) / 180);
-        targetCtx.fillText(p.text, 0, 0);
-        targetCtx.restore();
-      }
-    }
+  /* 1. 優化預覽區體驗 */
+  .preview-pane {
+    height: 50vh; /* 佔用螢幕一半高度，確保看得到預覽 */
+    flex: none;
+    border-bottom: 2px solid #ddd;
+    /* 關鍵：防止手指拖曳遮罩時，整個網頁跟著上下彈動 (iOS Safari 特別重要) */
+    overscroll-behavior: none; 
+    touch-action: none; 
   }
-  targetCtx.restore();
-  targetCtx.globalAlpha = 1.0;
-}
 
-function update() {
-  if (!isLoaded) return;
-  const maxDisplayW = 800;
-  let scale = 1;
-  if (previewImg.width > maxDisplayW) scale = maxDisplayW / previewImg.width;
-
-  canvas.width = previewImg.width * scale;
-  canvas.height = previewImg.height * scale;
-  ctx.drawImage(previewImg, 0, 0, canvas.width, canvas.height);
-
-  applyWatermarkToCanvas(ctx, canvas.width, canvas.height, getParams());
-}
-
-function generateCurrentSignature(p, outName, outFormat) {
-  const fileFeatures = files.map((f) => `${f.name}-${f.size}`).join("|");
-  const paramsStr = JSON.stringify(p);
-  return `${fileFeatures}__${paramsStr}__${outName}_${outFormat}`;
-}
-
-async function processAll() {
-  const btn = document.getElementById("dlBtn");
-  const msg = document.getElementById("statusMsg");
-  if (btn.disabled) return;
-  let outName =
-    document.getElementById("outputFileName").value || "watermarked_output";
-  const outFormat = document.getElementById("outputFormat").value;
-  const p = getParams();
-
-  const currentSignature = generateCurrentSignature(p, outName, outFormat);
-  if (currentSignature === lastJobSignature) {
-    if (
-      !confirm(
-        `系統提示：\n\n您剛剛已經下載過內容完全相同的檔案了！\n前次檔名為：${lastOutputName}\n\n確定要重新執行並下載嗎？`
-      )
-    )
-      return;
+  /* 2. 加大紅框的控制點 (Resize Handles) */
+  /* 手指比滑鼠粗，原本 10px 太難按，改為 24px */
+  .resize-handle {
+    width: 24px;
+    height: 24px;
+    border-width: 2px; /* 加粗邊框讓視覺更明顯 */
+    border-radius: 50%; /* 改成圓形比較好看且好按 */
+    background: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
   }
-  btn.disabled = true;
-  btn.innerText = "處理中...";
-  let finalDownloadName = "";
 
-  try {
-    const zip = new JSZip();
-    let singleResultBlob = null;
-    let singleResultExt = null;
-    let totalOutputCount = 0;
+  /* 因為控制點變大了，需要重新校正位置 (24px的一半是12px) */
+  .n { top: -12px; margin-left: -12px; }
+  .s { bottom: -12px; margin-left: -12px; }
+  .w { left: -12px; margin-top: -12px; }
+  .e { right: -12px; margin-top: -12px; }
+  .nw { top: -12px; left: -12px; }
+  .ne { top: -12px; right: -12px; }
+  .sw { bottom: -12px; left: -12px; }
+  .se { bottom: -12px; right: -12px; }
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      msg.innerText = `正在處理 (${i + 1}/${files.length}): ${file.name}`;
-
-      if (file.type === "application/pdf") {
-        if (outFormat === "png" || outFormat === "jpg") {
-          const mime = outFormat === "jpg" ? "image/jpeg" : "image/png";
-          const blobs = await processPdfToImages(file, p, mime);
-          blobs.forEach((blob, index) => {
-            const nameParts = file.name.split(".");
-            nameParts.pop();
-            const pageNum = (index + 1).toString().padStart(2, "0");
-            zip.file(
-              `${nameParts.join(".")}_page_${pageNum}.${outFormat}`,
-              blob
-            );
-          });
-          totalOutputCount += blobs.length;
-        } else {
-          const blob = await processPDF(file, p);
-          const nameParts = file.name.split(".");
-          nameParts.pop();
-          zip.file(`${nameParts.join(".")}_wm.pdf`, blob);
-          if (files.length === 1) {
-            singleResultBlob = blob;
-            singleResultExt = "pdf";
-          }
-          totalOutputCount++;
-        }
-      } else {
-        let ext, blob;
-        if (outFormat === "pdf") {
-          const imgBlob = await processImage(file, p, "image/jpeg");
-          blob = await createPdfFromImage(imgBlob);
-          ext = "pdf";
-        } else {
-          let mimeType = file.type;
-          if (outFormat === "jpg") mimeType = "image/jpeg";
-          if (outFormat === "png") mimeType = "image/png";
-          blob = await processImage(file, p, mimeType);
-          if (outFormat !== "auto") ext = outFormat;
-          else ext = file.type.split("/")[1];
-          if (ext === "jpeg") ext = "jpg";
-        }
-        const nameParts = file.name.split(".");
-        nameParts.pop();
-        zip.file(`${nameParts.join(".")}_wm.${ext}`, blob);
-        if (files.length === 1) {
-          singleResultBlob = blob;
-          singleResultExt = ext;
-        }
-        totalOutputCount++;
-      }
-    }
-    if (files.length === 1 && totalOutputCount === 1) {
-      finalDownloadName = `${outName}.${singleResultExt}`;
-      await saveFile(singleResultBlob, finalDownloadName, singleResultExt);
-    } else {
-      msg.innerText = "打包壓縮中...";
-      const content = await zip.generateAsync({ type: "blob" });
-      finalDownloadName = `${outName}.zip`;
-      await saveFile(content, finalDownloadName, "zip");
-    }
-    lastJobSignature = currentSignature;
-    lastOutputName = finalDownloadName;
-    msg.innerText = "完成！";
-  } catch (error) {
-    console.error(error);
-    msg.innerText = "發生錯誤: " + error.message;
-  } finally {
-    btn.disabled = false;
-    btn.innerText = "另存新檔";
+  /* 3. 優化控制面板 */
+  .control-pane {
+    width: 100%;
+    border-left: none;
+    border-top: none;
+    height: auto;
+    overflow: visible;
+    padding-bottom: 80px; /* 預留底部空間給按鈕 */
   }
-}
 
-async function processPdfToImages(file, p, mimeType) {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-  const outputBlobs = [];
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const page = await pdf.getPage(pageNum);
-    const viewport = page.getViewport({ scale: 2 });
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    await page.render({ canvasContext: context, viewport: viewport }).promise;
-    applyWatermarkToCanvas(context, canvas.width, canvas.height, p);
-    const blob = await new Promise((r) => canvas.toBlob(r, mimeType, 0.9));
-    outputBlobs.push(blob);
+  /* 4. 加大按鈕觸控區域 (符合 Apple/Google 設計規範的最小 44px) */
+  .mode-btn, 
+  .grid-btn, 
+  .color-dropdown-btn,
+  .file-upload-btn,
+  input[type="range"],
+  select {
+    min-height: 44px; 
+    font-size: 14px; /* 字體稍微加大 */
   }
-  return outputBlobs;
-}
 
-async function createPdfFromImage(imgBlob) {
-  const pdfDoc = await PDFLib.PDFDocument.create();
-  const imgBytes = await imgBlob.arrayBuffer();
-  let imgEmbed;
-  if (imgBlob.type === "image/png") imgEmbed = await pdfDoc.embedPng(imgBytes);
-  else imgEmbed = await pdfDoc.embedJpg(imgBytes);
-  const page = pdfDoc.addPage([imgEmbed.width, imgEmbed.height]);
-  page.drawImage(imgEmbed, {
-    x: 0,
-    y: 0,
-    width: imgEmbed.width,
-    height: imgEmbed.height,
-  });
-  const pdfBytes = await pdfDoc.save();
-  return new Blob([pdfBytes], { type: "application/pdf" });
-}
-
-function processImage(file, p, mimeType = null) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-    img.onload = () => {
-      const c = document.createElement("canvas");
-      const x = c.getContext("2d");
-      c.width = img.width;
-      c.height = img.height;
-      x.drawImage(img, 0, 0);
-      applyWatermarkToCanvas(x, c.width, c.height, p);
-      const outputType = mimeType || file.type;
-      c.toBlob((b) => resolve(b), outputType, 0.9);
-    };
-  });
-}
-
-async function processPDF(file, p) {
-  const buffer = await file.arrayBuffer();
-  const pdfDoc = await PDFLib.PDFDocument.load(buffer);
-  const pages = pdfDoc.getPages();
-  for (let i = 0; i < pages.length; i++) {
-    const page = pages[i];
-    const { width, height } = page.getSize();
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    canvas.width = width;
-    canvas.height = height;
-    applyWatermarkToCanvas(ctx, width, height, p);
-    const pngBlob = await new Promise((r) => canvas.toBlob(r, "image/png"));
-    const pngImageBytes = await pngBlob.arrayBuffer();
-    const embeddedImage = await pdfDoc.embedPng(pngImageBytes);
-    page.drawImage(embeddedImage, { x: 0, y: 0, width: width, height: height });
+  /* 九宮格按鈕加大 */
+  .grid-selector {
+    width: 100%; /* 讓九宮格寬一點 */
+    gap: 8px;
   }
-  const saved = await pdfDoc.save();
-  return new Blob([saved], { type: "application/pdf" });
-}
-
-async function saveFile(blob, suggestedName, ext) {
-  if ("showSaveFilePicker" in window) {
-    try {
-      const types = [];
-      if (ext === "pdf")
-        types.push({
-          description: "PDF 文件",
-          accept: { "application/pdf": [".pdf"] },
-        });
-      else if (ext === "zip")
-        types.push({
-          description: "ZIP 壓縮檔",
-          accept: { "application/zip": [".zip"] },
-        });
-      else if (ext === "jpg")
-        types.push({
-          description: "JPG 圖片",
-          accept: { "image/jpeg": [".jpg"] },
-        });
-      else if (ext === "png")
-        types.push({
-          description: "PNG 圖片",
-          accept: { "image/png": [".png"] },
-        });
-      else types.push({ description: "檔案", accept: { "*/*": ["." + ext] } });
-      const handle = await window.showSaveFilePicker({ suggestedName, types });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      return;
-    } catch (err) {
-      if (err.name === "AbortError") return;
-    }
+  .grid-btn {
+    height: 40px;
   }
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = suggestedName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+  
+  /* 讓滑桿更好拉 */
+  input[type="range"] {
+    height: 30px; /* 增加滑桿感應區高度 */
+  }
 
-function hexToRgb(hex) {
-  return {
-    r: parseInt(hex.slice(1, 3), 16),
-    g: parseInt(hex.slice(3, 5), 16),
-    b: parseInt(hex.slice(5, 7), 16),
-  };
-}
-function rgbToHex(r, g, b) {
-  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  /* 讓「另存新檔」按鈕固定在底部，方便操作 */
+  .action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    padding: 10px 15px;
+    background: #f9f9f9; /* 確保不透明 */
+  }
+  
+  /* 修正彈出顏色選單的位置 */
+  .color-popup {
+    width: 90%; /* 手機上寬度設為 90% */
+    left: 5%;
+  }
 }
