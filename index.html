@@ -40,7 +40,10 @@
 
     <div class="main-workspace">
       <div class="preview-pane" id="previewPane">
-        <div id="welcomeMsg" style="color: #666">請從右側選單載入檔案</div>
+        <div id="welcomeMsg" style="color: #666">
+          <span class="desktop-text">請從右側選單載入檔案</span>
+          <span class="mobile-text">請從下方選單載入檔案</span>
+        </div>
 
         <div style="position: relative; display: inline-block">
           <canvas id="previewCanvas" class="canvas-container"></canvas>
@@ -98,8 +101,8 @@
               margin-top: 5px;
             "
           >
-            💡
-            請在左側預覽圖上，調整紅色框框位置，框選處將<b>不會</b>加上浮水印。
+            <span class="desktop-text">💡 請在左側預覽圖上，調整紅色框框位置，框選處將<b>不會</b>加上浮水印。</span>
+            <span class="mobile-text">💡 請在上方預覽圖上，調整紅色框框位置，框選處將<b>不會</b>加上浮水印。</span>
           </div>
         </div>
 
